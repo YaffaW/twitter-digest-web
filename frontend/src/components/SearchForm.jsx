@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SyntaxHelp from './SyntaxHelp';
 import './SearchForm.css';
 
 export default function SearchForm({ onSearch, isLoading }) {
@@ -8,6 +9,7 @@ export default function SearchForm({ onSearch, isLoading }) {
   const [maxTweets, setMaxTweets] = useState(30);
   const [fetchReplies, setFetchReplies] = useState(true);
   const [mode, setMode] = useState('markdown');
+  const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
 
   const handleQueryChange = (index, value) => {
     const newQueries = [...queries];
@@ -47,7 +49,17 @@ export default function SearchForm({ onSearch, isLoading }) {
   return (
     <form className="search-form" onSubmit={handleSubmit}>
       <div className="form-section">
-        <h3>Search Queries</h3>
+        <div className="section-header">
+          <h3>Search Queries</h3>
+          <button
+            type="button"
+            className="btn-syntax-help"
+            onClick={() => setShowSyntaxHelp(true)}
+            title="View DuckDuckGo search syntax help"
+          >
+            ? Syntax Help
+          </button>
+        </div>
         <p className="help-text">
           DuckDuckGo syntax is supported. Examples: "claude code" OR "cursor ai", ("react" OR "next.js") framework
         </p>
@@ -164,6 +176,8 @@ export default function SearchForm({ onSearch, isLoading }) {
       >
         {isLoading ? 'Searching...' : 'Search & Generate Digest'}
       </button>
+
+      <SyntaxHelp isOpen={showSyntaxHelp} onClose={() => setShowSyntaxHelp(false)} />
     </form>
   );
 }
