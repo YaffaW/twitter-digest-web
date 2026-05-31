@@ -6,12 +6,31 @@ with a headless browser, scrolls to load results, and extracts tweet URLs.
 from typing import List
 from urllib.parse import quote_plus
 import time
+import threading
+from datetime import datetime, timedelta
+
+# Simple in-memory cache for recent queries/profile results
+_CACHE_LOCK = threading.Lock()
+_CACHE: dict = {}  # key -> (timestamp, result_list)
+CACHE_TTL = 300  # seconds
+
+# Simple rate limiter: ensure at least MIN_INTERVAL seconds between Playwright navigations
+_RATE_LOCK = threading.Lock()
+_LAST_CALL = datetime.fromtimestamp(0)
+MIN_INTERVAL = 0.5  # seconds
 
 def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: int = 30) -> List[str]:
     """Search X (x.com) web search and return list of tweet URLs.
 
     Requires the `playwright` package and installed browsers.
     """
+    key = f"search_x:{query}:{max_results}"
+    now = time.time()
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if entry and now - entry[0] < CACHE_TTL:
+            return list(entry[1])
+
     try:
         from playwright.sync_api import sync_playwright
     except Exception as e:
@@ -20,6 +39,14 @@ def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: 
     urls = []
     q = quote_plus(query)
     search_url = f"https://x.com/search?q={q}&src=typed_query"
+
+    # Rate limit Playwright navigations
+    with _RATE_LOCK:
+        global _LAST_CALL
+        elapsed = (datetime.now() - _LAST_CALL).total_seconds()
+        if elapsed < MIN_INTERVAL:
+            time.sleep(MIN_INTERVAL - elapsed)
+        _LAST_CALL = datetime.now()
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=headless)
@@ -56,6 +83,9 @@ def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: 
         except Exception:
             pass
 
+    # store in cache
+    with _CACHE_LOCK:
+        _CACHE[key] = (time.time(), list(urls))
     return urls
 
 
@@ -64,6 +94,13 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
 
     This helps when queries include `from:username` and DDG misses recent tweets.
     """
+    key = f"timeline:{username}:{max_results}"
+    now = time.time()
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if entry and now - entry[0] < CACHE_TTL:
+            return list(entry[1])
+
     try:
         from playwright.sync_api import sync_playwright
     except Exception as e:
@@ -71,6 +108,13 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
 
     urls = []
     profile_url = f"https://x.com/{quote_plus(username)}"
+
+    with _RATE_LOCK:
+        global _LAST_CALL
+        elapsed = (datetime.now() - _LAST_CALL).total_seconds()
+        if elapsed < MIN_INTERVAL:
+            time.sleep(MIN_INTERVAL - elapsed)
+        _LAST_CALL = datetime.now()
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=headless)
@@ -104,4 +148,6 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
         except Exception:
             pass
 
+    with _CACHE_LOCK:
+        _CACHE[key] = (time.time(), list(urls))
     return urls

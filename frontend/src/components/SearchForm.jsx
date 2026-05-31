@@ -12,7 +12,7 @@ export default function SearchForm({ onSearch, isLoading }) {
   const [timeWindowHours, setTimeWindowHours] = useState(72);
   const [mode, setMode] = useState('markdown');
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
-  const [useXSearch, setUseXSearch] = useState(false);
+  const [useXSearch, setUseXSearch] = useState(true);
 
   const handleQueryChange = (index, value) => {
     const newQueries = [...queries];

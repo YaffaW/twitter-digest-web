@@ -19,7 +19,7 @@ class SearchRequest(BaseModel):
     min_likes: int = 3
     min_text_length: int = 0
     time_window_hours: int = 24
-    use_x_search: bool = False
+    use_x_search: bool = True
     fetch_replies: bool = True
     max_tweets: int = 30
     mode: str = "markdown"  # json, markdown, or claude
