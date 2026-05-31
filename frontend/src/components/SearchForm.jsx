@@ -5,11 +5,11 @@ import './SearchForm.css';
 export default function SearchForm({ onSearch, isLoading }) {
   const [queries, setQueries] = useState(['@elonmusk -from:elonmusk']);
   const [maxResultsPerQuery, setMaxResultsPerQuery] = useState(20);
-  const [minLikes, setMinLikes] = useState(1000);
-  const [minTextLength, setMinTextLength] = useState(200);
+  const [minLikes, setMinLikes] = useState(100);
+  const [minTextLength, setMinTextLength] = useState(100);
   const [maxTweets, setMaxTweets] = useState(30);
   const [fetchReplies, setFetchReplies] = useState(true);
-  const [within24Hours, setWithin24Hours] = useState(true);
+  const [timeWindowHours, setTimeWindowHours] = useState(72);
   const [mode, setMode] = useState('markdown');
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
 
@@ -43,7 +43,7 @@ export default function SearchForm({ onSearch, isLoading }) {
       max_results_per_query: parseInt(maxResultsPerQuery),
       min_likes: parseInt(minLikes),
       min_text_length: parseInt(minTextLength),
-      within_24_hours: within24Hours,
+      time_window_hours: parseInt(timeWindowHours),
       max_tweets: parseInt(maxTweets),
       fetch_replies: fetchReplies,
       mode: mode,
@@ -168,15 +168,18 @@ export default function SearchForm({ onSearch, isLoading }) {
           <label htmlFor="fetchReplies">Fetch thread replies</label>
         </div>
 
-        <div className="form-group checkbox">
+        <div className="form-group">
+          <label htmlFor="timeWindowHours">Time window (hours, 0 = off):</label>
           <input
-            id="within24Hours"
-            type="checkbox"
-            checked={within24Hours}
-            onChange={(e) => setWithin24Hours(e.target.checked)}
+            id="timeWindowHours"
+            type="number"
+            min="0"
+            max="168"
+            value={timeWindowHours}
+            onChange={(e) => setTimeWindowHours(e.target.value)}
             disabled={isLoading}
           />
-          <label htmlFor="within24Hours">Only tweets from last 24 hours</label>
+          <p className="help-text">Default 24 hours; set to 0 to disable time filtering.</p>
         </div>
 
         <div className="form-group">

@@ -90,7 +90,7 @@ Search for tweets based on queries.
   "max_results_per_query": 20,
   "min_likes": 1000,
   "min_text_length": 200,
-  "within_24_hours": true,
+  "time_window_hours": 24,
   "fetch_replies": true,
   "max_tweets": 30,
   "mode": "markdown"
@@ -121,7 +121,7 @@ Health check endpoint.
 | max_results_per_query | int | 20 | Max tweets per query |
 | min_likes | int | 1000 | Minimum engagement threshold (likes) |
 | min_text_length | int | 200 | Minimum tweet text length (characters) |
-| within_24_hours | bool | true | Filter tweets from last 24 hours only |
+| time_window_hours | int | 24 | Time window in hours (set to 0 to disable time filtering) |
 | max_tweets | int | 30 | Max tweets to return |
 | fetch_replies | bool | true | Fetch thread replies |
 | mode | string | markdown | Output format: json, markdown, claude |

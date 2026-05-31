@@ -15,7 +15,10 @@ logger = logging.getLogger("twitter_fetcher")
 
 
 def search_tweets(query: str, max_results: int = 20) -> list[str]:
-    """Search DuckDuckGo for X/Twitter URLs matching the query."""
+    """Search DuckDuckGo for X (x.com) tweet URLs matching the query.
+
+    Note: intentionally restricts searches to x.com only per user request.
+    """
     full_query = f"site:x.com {query}"
     urls = []
     try:
@@ -28,7 +31,7 @@ def search_tweets(query: str, max_results: int = 20) -> list[str]:
                 urls.append(href)
     except Exception as e:
         logger.error(f"Search failed: {e}")
-    
+
     logger.info(f"Found {len(urls)} tweet URLs for query: {query[:60]}...")
     return urls
 
@@ -101,34 +104,50 @@ def fetch_replies(tweet_id: str, username: str) -> list[dict]:
         return []
 
 
-def is_within_24_hours(timestamp_str: str) -> bool:
-    """Check if a tweet timestamp is within the last 24 hours."""
+def is_within_hours(timestamp_str: str, hours: int) -> bool:
+    """Check if a tweet timestamp is within the last `hours` hours.
+
+    Returns False when timestamp is missing or unparseable.
+    """
     try:
+        if not timestamp_str:
+            return False
+
         # Try parsing ISO format with timezone (2024-05-31T12:30:45Z)
         if 'T' in timestamp_str and 'Z' in timestamp_str:
             tweet_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
         else:
-            # Fallback: try common formats
-            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S']:
+            # Fallback: try common formats and Twitter-style strings
+            for fmt in [
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%dT%H:%M:%S',
+                '%a %b %d %H:%M:%S %z %Y',
+            ]:
                 try:
                     tweet_time = datetime.strptime(timestamp_str, fmt)
                     break
                 except ValueError:
                     continue
             else:
-                return True  # If we can't parse, include it
-        
+                logger.warning(f"Unable to parse timestamp: {timestamp_str}")
+                return False
+
         # Make tweet_time timezone-aware if it isn't
         if tweet_time.tzinfo is None:
             tweet_time = tweet_time.replace(tzinfo=None)
             now = datetime.utcnow()
         else:
             now = datetime.now(tweet_time.tzinfo)
-        
-        return (now - tweet_time) <= timedelta(hours=24)
+
+        return (now - tweet_time) <= timedelta(hours=hours)
     except Exception as e:
         logger.warning(f"Error parsing timestamp {timestamp_str}: {e}")
-        return True  # If parsing fails, include the tweet
+        return False
+
+
+def is_within_24_hours(timestamp_str: str) -> bool:
+    """Backward-compatible helper for 24-hour window."""
+    return is_within_hours(timestamp_str, 24)
 
 
 def search_and_fetch(
@@ -136,7 +155,7 @@ def search_and_fetch(
     max_results_per_query: int = 20,
     min_likes: int = 3,
     min_text_length: int = 0,
-    within_24_hours: bool = False,
+    time_window_hours: int = 24,
     fetch_replies_flag: bool = True,
     max_tweets: int = 30,
 ) -> list[dict]:
@@ -169,14 +188,14 @@ def search_and_fetch(
 
     # Filter by minimum engagement, text length, and time
     filter_msg = f"min {min_likes} likes, min {min_text_length} chars"
-    if within_24_hours:
+    if time_window_hours and time_window_hours > 0:
         tweets = [
             t for t in tweets 
             if t["likes"] >= min_likes 
             and len(t["text"]) >= min_text_length 
-            and is_within_24_hours(t.get("created_at", ""))
+            and is_within_hours(t.get("created_at", ""), time_window_hours)
         ]
-        filter_msg += ", within 24 hours"
+        filter_msg += f", within {time_window_hours} hours"
     else:
         tweets = [t for t in tweets if t["likes"] >= min_likes and len(t["text"]) >= min_text_length]
     

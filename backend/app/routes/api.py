@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from typing import Optional
 import logging
 
 from ..core import twitter_fetcher, formatter, summarizer
@@ -17,7 +18,7 @@ class SearchRequest(BaseModel):
     max_results_per_query: int = 20
     min_likes: int = 3
     min_text_length: int = 0
-    within_24_hours: bool = False
+    time_window_hours: int = 24
     fetch_replies: bool = True
     max_tweets: int = 30
     mode: str = "markdown"  # json, markdown, or claude
@@ -27,7 +28,7 @@ class SearchResponse(BaseModel):
     """Response model for tweet search."""
     tweets: list[dict]
     count: int
-    digest: str = None
+    digest: Optional[str] = None
     status: str
 
 
@@ -39,6 +40,7 @@ async def search_tweets(request: SearchRequest):
     - queries: List of search queries (DuckDuckGo syntax)
     - max_results_per_query: Max tweets per query
     - min_likes: Minimum likes threshold
+    - time_window_hours: Time window in hours (0 disables time filtering)
     - fetch_replies: Whether to fetch thread replies
     - max_tweets: Max tweets to return
     - mode: Output format (json, markdown, claude)
@@ -56,7 +58,7 @@ async def search_tweets(request: SearchRequest):
             max_results_per_query=request.max_results_per_query,
             min_likes=request.min_likes,
             min_text_length=request.min_text_length,
-            within_24_hours=request.within_24_hours,
+            time_window_hours=request.time_window_hours,
             fetch_replies_flag=request.fetch_replies,
             max_tweets=request.max_tweets,
         )
