@@ -86,9 +86,11 @@ Search for tweets based on queries.
 **Request:**
 ```json
 {
-  "queries": ["claude code", "mcp"],
+  "queries": ["@elonmusk -from:elonmusk"],
   "max_results_per_query": 20,
-  "min_likes": 3,
+  "min_likes": 1000,
+  "min_text_length": 200,
+  "within_24_hours": true,
   "fetch_replies": true,
   "max_tweets": 30,
   "mode": "markdown"
@@ -117,7 +119,9 @@ Health check endpoint.
 |-----------|------|---------|-------------|
 | queries | array | required | DuckDuckGo search queries |
 | max_results_per_query | int | 20 | Max tweets per query |
-| min_likes | int | 3 | Minimum engagement threshold |
+| min_likes | int | 1000 | Minimum engagement threshold (likes) |
+| min_text_length | int | 200 | Minimum tweet text length (characters) |
+| within_24_hours | bool | true | Filter tweets from last 24 hours only |
 | max_tweets | int | 30 | Max tweets to return |
 | fetch_replies | bool | true | Fetch thread replies |
 | mode | string | markdown | Output format: json, markdown, claude |
@@ -175,6 +179,20 @@ Or configure in `frontend/vite.config.js`
 
 ## Usage Examples
 
+### Search for Popular Mentions of Elon Musk (Default)
+
+```
+Queries: 
+- @elonmusk -from:elonmusk
+
+Min Likes: 1000
+Min Text Length: 200
+Within 24 Hours: Yes
+Output: Markdown
+```
+
+This searches for tweets that mention Elon Musk but exclude tweets posted by Elon Musk himself, filtering for high engagement (>1000 likes), longer content (>200 characters), and only tweets from the last 24 hours.
+
 ### Search for AI News
 
 ```
@@ -182,7 +200,8 @@ Queries:
 - "artificial intelligence" OR "AI"
 - "machine learning" OR "deep learning"
 
-Min Likes: 5
+Min Likes: 100
+Min Text Length: 100
 Output: Markdown
 ```
 
@@ -193,7 +212,8 @@ Queries:
 - "programming" OR "coding"
 - "web development" OR "frontend"
 
-Min Likes: 2
+Min Likes: 50
+Min Text Length: 100
 Output: Claude (AI Summary)
 ```
 

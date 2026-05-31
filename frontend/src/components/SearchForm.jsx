@@ -3,11 +3,13 @@ import SyntaxHelp from './SyntaxHelp';
 import './SearchForm.css';
 
 export default function SearchForm({ onSearch, isLoading }) {
-  const [queries, setQueries] = useState(['']);
+  const [queries, setQueries] = useState(['@elonmusk -from:elonmusk']);
   const [maxResultsPerQuery, setMaxResultsPerQuery] = useState(20);
-  const [minLikes, setMinLikes] = useState(3);
+  const [minLikes, setMinLikes] = useState(1000);
+  const [minTextLength, setMinTextLength] = useState(200);
   const [maxTweets, setMaxTweets] = useState(30);
   const [fetchReplies, setFetchReplies] = useState(true);
+  const [within24Hours, setWithin24Hours] = useState(true);
   const [mode, setMode] = useState('markdown');
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
 
@@ -40,6 +42,8 @@ export default function SearchForm({ onSearch, isLoading }) {
       queries: validQueries,
       max_results_per_query: parseInt(maxResultsPerQuery),
       min_likes: parseInt(minLikes),
+      min_text_length: parseInt(minTextLength),
+      within_24_hours: within24Hours,
       max_tweets: parseInt(maxTweets),
       fetch_replies: fetchReplies,
       mode: mode,
@@ -140,6 +144,19 @@ export default function SearchForm({ onSearch, isLoading }) {
           />
         </div>
 
+        <div className="form-group">
+          <label htmlFor="minTextLength">Minimum Tweet Length (characters):</label>
+          <input
+            id="minTextLength"
+            type="number"
+            min="0"
+            max="10000"
+            value={minTextLength}
+            onChange={(e) => setMinTextLength(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
         <div className="form-group checkbox">
           <input
             id="fetchReplies"
@@ -149,6 +166,17 @@ export default function SearchForm({ onSearch, isLoading }) {
             disabled={isLoading}
           />
           <label htmlFor="fetchReplies">Fetch thread replies</label>
+        </div>
+
+        <div className="form-group checkbox">
+          <input
+            id="within24Hours"
+            type="checkbox"
+            checked={within24Hours}
+            onChange={(e) => setWithin24Hours(e.target.checked)}
+            disabled={isLoading}
+          />
+          <label htmlFor="within24Hours">Only tweets from last 24 hours</label>
         </div>
 
         <div className="form-group">
