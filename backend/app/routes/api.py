@@ -19,6 +19,7 @@ class SearchRequest(BaseModel):
     min_likes: int = 3
     min_text_length: int = 0
     time_window_hours: int = 24
+    use_x_search: bool = False
     fetch_replies: bool = True
     max_tweets: int = 30
     mode: str = "markdown"  # json, markdown, or claude
@@ -59,6 +60,7 @@ async def search_tweets(request: SearchRequest):
             min_likes=request.min_likes,
             min_text_length=request.min_text_length,
             time_window_hours=request.time_window_hours,
+            use_x_search=request.use_x_search,
             fetch_replies_flag=request.fetch_replies,
             max_tweets=request.max_tweets,
         )

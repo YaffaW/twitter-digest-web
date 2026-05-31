@@ -9,6 +9,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 
 import requests
+import time
 from ddgs import DDGS
 
 logger = logging.getLogger("twitter_fetcher")
@@ -56,11 +57,29 @@ def fetch_tweet(url: str) -> Optional[dict]:
         return None
 
     api_url = f"https://api.fxtwitter.com/{username}/status/{tweet_id}"
+    # Retry logic to reduce misses due to transient network errors or timeouts
+    attempts = 3
+    backoff = 1
+    data = None
+    for attempt in range(attempts):
+        try:
+            resp = requests.get(api_url, timeout=15)
+            if resp.status_code != 200:
+                # non-200 - break and treat as missing
+                break
+            data = resp.json()
+            break
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Attempt {attempt+1} failed fetching {tweet_id}: {e}")
+            time.sleep(backoff)
+            backoff *= 2
+            continue
+    if not data:
+        return None
     try:
-        resp = requests.get(api_url, timeout=15)
-        if resp.status_code != 200:
+        tweet = data.get("tweet")
+        if not tweet:
             return None
-        data = resp.json()
         tweet = data.get("tweet")
         if not tweet:
             return None
@@ -156,16 +175,52 @@ def search_and_fetch(
     min_likes: int = 3,
     min_text_length: int = 0,
     time_window_hours: int = 24,
+    use_x_search: bool = False,
     fetch_replies_flag: bool = True,
     max_tweets: int = 30,
 ) -> list[dict]:
     """
     Search for tweets, fetch their data, filter, and return sorted results.
     """
+    # Parse author include/exclude filters from queries (tokens like from:alice or -from:bob)
+    include_authors = set()
+    exclude_authors = set()
+    for q in queries:
+        for m in re.findall(r'(?i)from:(\w+)', q):
+            include_authors.add(m.lower())
+        for m in re.findall(r'(?i)-from:(\w+)', q):
+            exclude_authors.add(m.lower())
+
     # Search for tweet URLs
     all_urls = []
     for q in queries:
         all_urls.extend(search_tweets(q, max_results_per_query))
+
+    # Optionally use X web search as a secondary source (Playwright)
+    if use_x_search:
+        try:
+            from . import x_search
+            for q in queries:
+                try:
+                    x_urls = x_search.search_x(q, max_results=max_results_per_query)
+                    all_urls.extend(x_urls)
+                except Exception as e:
+                    logger.warning(f"x_search failed for query '{q}': {e}")
+        except Exception:
+            logger.warning("x_search module not available; skipping X web search")
+
+    # If specific authors were requested, scrape their timelines to improve recall
+    if include_authors:
+        try:
+            from . import x_search
+            for author in include_authors:
+                try:
+                    profile_urls = x_search.search_user_timeline(author, max_results=max_results_per_query)
+                    all_urls.extend(profile_urls)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch timeline for {author}: {e}")
+        except Exception:
+            logger.warning("x_search module not available; cannot fetch user timelines")
 
     # Deduplicate by tweet ID
     seen_ids = set()
@@ -185,6 +240,12 @@ def search_and_fetch(
             tweets.append(tweet)
 
     logger.info(f"Fetched {len(tweets)} tweets successfully")
+
+    # Apply author include/exclude filters first
+    if include_authors:
+        tweets = [t for t in tweets if t.get('author','').lower() in include_authors]
+    if exclude_authors:
+        tweets = [t for t in tweets if t.get('author','').lower() not in exclude_authors]
 
     # Filter by minimum engagement, text length, and time
     filter_msg = f"min {min_likes} likes, min {min_text_length} chars"

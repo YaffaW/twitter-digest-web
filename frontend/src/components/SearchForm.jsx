@@ -12,6 +12,7 @@ export default function SearchForm({ onSearch, isLoading }) {
   const [timeWindowHours, setTimeWindowHours] = useState(72);
   const [mode, setMode] = useState('markdown');
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false);
+  const [useXSearch, setUseXSearch] = useState(false);
 
   const handleQueryChange = (index, value) => {
     const newQueries = [...queries];
@@ -44,6 +45,7 @@ export default function SearchForm({ onSearch, isLoading }) {
       min_likes: parseInt(minLikes),
       min_text_length: parseInt(minTextLength),
       time_window_hours: parseInt(timeWindowHours),
+      use_x_search: Boolean(useXSearch),
       max_tweets: parseInt(maxTweets),
       fetch_replies: fetchReplies,
       mode: mode,
@@ -197,6 +199,17 @@ export default function SearchForm({ onSearch, isLoading }) {
           <p className="help-text">
             {mode === 'claude' && 'Requires Claude CLI to be installed and configured'}
           </p>
+        </div>
+
+        <div className="form-group checkbox">
+          <input
+            id="useXSearch"
+            type="checkbox"
+            checked={useXSearch}
+            onChange={(e) => setUseXSearch(e.target.checked)}
+            disabled={isLoading}
+          />
+          <label htmlFor="useXSearch">Use X.com web-search fallback (Playwright)</label>
         </div>
       </div>
 
