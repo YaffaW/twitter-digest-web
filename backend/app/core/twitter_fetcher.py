@@ -200,10 +200,19 @@ def search_and_fetch(
     if use_x_search:
         try:
             from . import x_search
+            from . import bg_worker
             for q in queries:
                 try:
-                    x_urls = x_search.search_x(q, max_results=max_results_per_query)
-                    all_urls.extend(x_urls)
+                    cached = x_search.get_cached_search(q, max_results_per_query)
+                    if cached is not None:
+                        all_urls.extend(cached)
+                    else:
+                        # schedule background fetch to populate cache; do not block
+                        try:
+                            bg_worker.enqueue(x_search.search_x, q, max_results_per_query)
+                            logger.info(f"Enqueued background x_search for query: {q[:60]}")
+                        except Exception as e:
+                            logger.warning(f"Failed to enqueue x_search for '{q}': {e}")
                 except Exception as e:
                     logger.warning(f"x_search failed for query '{q}': {e}")
         except Exception:
@@ -213,12 +222,20 @@ def search_and_fetch(
     if include_authors:
         try:
             from . import x_search
+            from . import bg_worker
             for author in include_authors:
                 try:
-                    profile_urls = x_search.search_user_timeline(author, max_results=max_results_per_query)
-                    all_urls.extend(profile_urls)
+                    cached = x_search.get_cached_timeline(author, max_results_per_query)
+                    if cached is not None:
+                        all_urls.extend(cached)
+                    else:
+                        try:
+                            bg_worker.enqueue(x_search.search_user_timeline, author, max_results_per_query)
+                            logger.info(f"Enqueued background timeline fetch for author: {author}")
+                        except Exception as e:
+                            logger.warning(f"Failed to enqueue timeline fetch for {author}: {e}")
                 except Exception as e:
-                    logger.warning(f"Failed to fetch timeline for {author}: {e}")
+                    logger.warning(f"Failed to handle timeline for {author}: {e}")
         except Exception:
             logger.warning("x_search module not available; cannot fetch user timelines")
 

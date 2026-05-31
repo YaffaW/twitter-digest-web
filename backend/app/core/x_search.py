@@ -89,6 +89,16 @@ def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: 
     return urls
 
 
+def get_cached_search(query: str, max_results: int = 50):
+    key = f"search_x:{query}:{max_results}"
+    now = time.time()
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if entry and now - entry[0] < CACHE_TTL:
+            return list(entry[1])
+    return None
+
+
 def search_user_timeline(username: str, max_results: int = 50, headless: bool = True, timeout: int = 30) -> List[str]:
     """Scrape a user's X timeline and return recent tweet URLs.
 
@@ -151,3 +161,13 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
     with _CACHE_LOCK:
         _CACHE[key] = (time.time(), list(urls))
     return urls
+
+
+def get_cached_timeline(username: str, max_results: int = 50):
+    key = f"timeline:{username}:{max_results}"
+    now = time.time()
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if entry and now - entry[0] < CACHE_TTL:
+            return list(entry[1])
+    return None
