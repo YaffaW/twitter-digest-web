@@ -48,5 +48,11 @@ npm run dev
 - 提交并推送当前改动到远程仓库（我可以执行）。
 - 为 Playwright 抓取添加缓存层和异步 worker（需要决定缓存策略与存储）。
 - 将 `use_x_search` 可视化为前端设置并储存在本地配置，便于默认策略控制。
+ 
+### 已实现：轻量后台 worker
+
+- 项目内已加入一个简单的线程队列 `backend/app/core/bg_worker.py`，用于异步执行阻塞的 Playwright 抓取任务。
+- `backend/app/core/x_search.py` 新增缓存查找接口 `get_cached_search()` / `get_cached_timeline()`。当缓存未命中时，`twitter_fetcher` 会把实际的 Playwright 抓取任务排入后台队列并立即返回当前（DDG）结果。后台任务完成后会把结果写入内存缓存供后续请求使用。
+- 这是一个轻量实现，适合快速提升响应性与减少请求延迟；生产环境建议将缓存迁移到 Redis 并把后台 worker 稳定化（Celery / RQ / systemd service 等）。
 
 如需，我可以现在提交并推送改动并启动前端开发服务器来演示。
