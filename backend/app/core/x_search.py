@@ -7,9 +7,10 @@ from typing import List
 from urllib.parse import quote_plus
 import time
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime
+import json
 
-# Simple in-memory cache for recent queries/profile results
+# Simple in-memory cache for fallback
 _CACHE_LOCK = threading.Lock()
 _CACHE: dict = {}  # key -> (timestamp, result_list)
 CACHE_TTL = 300  # seconds
@@ -19,6 +20,18 @@ _RATE_LOCK = threading.Lock()
 _LAST_CALL = datetime.fromtimestamp(0)
 MIN_INTERVAL = 0.5  # seconds
 
+# Optional Redis client (if available and reachable)
+_REDIS = None
+try:
+    import redis
+    try:
+        _REDIS = redis.Redis(host='127.0.0.1', port=6379, db=0, socket_connect_timeout=1)
+        _REDIS.ping()
+    except Exception:
+        _REDIS = None
+except Exception:
+    _REDIS = None
+
 def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: int = 30) -> List[str]:
     """Search X (x.com) web search and return list of tweet URLs.
 
@@ -26,6 +39,16 @@ def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: 
     """
     key = f"search_x:{query}:{max_results}"
     now = time.time()
+    # Try Redis first
+    if _REDIS:
+        try:
+            raw = _REDIS.get(key)
+            if raw:
+                data = json.loads(raw)
+                return list(data)
+        except Exception:
+            # fallback to in-memory
+            pass
     with _CACHE_LOCK:
         entry = _CACHE.get(key)
         if entry and now - entry[0] < CACHE_TTL:
@@ -83,7 +106,13 @@ def search_x(query: str, max_results: int = 50, headless: bool = True, timeout: 
         except Exception:
             pass
 
-    # store in cache
+    # store in cache (Redis preferred)
+    try:
+        if _REDIS:
+            _REDIS.setex(key, CACHE_TTL, json.dumps(list(urls)))
+            return urls
+    except Exception:
+        pass
     with _CACHE_LOCK:
         _CACHE[key] = (time.time(), list(urls))
     return urls
@@ -106,6 +135,14 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
     """
     key = f"timeline:{username}:{max_results}"
     now = time.time()
+    if _REDIS:
+        try:
+            raw = _REDIS.get(key)
+            if raw:
+                data = json.loads(raw)
+                return list(data)
+        except Exception:
+            pass
     with _CACHE_LOCK:
         entry = _CACHE.get(key)
         if entry and now - entry[0] < CACHE_TTL:
@@ -158,6 +195,12 @@ def search_user_timeline(username: str, max_results: int = 50, headless: bool = 
         except Exception:
             pass
 
+    try:
+        if _REDIS:
+            _REDIS.setex(key, CACHE_TTL, json.dumps(list(urls)))
+            return urls
+    except Exception:
+        pass
     with _CACHE_LOCK:
         _CACHE[key] = (time.time(), list(urls))
     return urls

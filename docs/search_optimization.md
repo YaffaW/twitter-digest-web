@@ -56,3 +56,15 @@ npm run dev
 - 这是一个轻量实现，适合快速提升响应性与减少请求延迟；生产环境建议将缓存迁移到 Redis 并把后台 worker 稳定化（Celery / RQ / systemd service 等）。
 
 如需，我可以现在提交并推送改动并启动前端开发服务器来演示。
+
+## 实施记录（逐步）
+
+- T1: 将缓存替换为 Redis（已实现，状态：完成）
+  - 变更点：`backend/app/core/x_search.py` 现在优先使用本地 Redis（127.0.0.1:6379）存取缓存（key: `search_x:<query>:<max_results>` / `timeline:<username>:<max_results>`），不可用时回退到内存缓存。
+  - 依赖：在 `backend/requirements.txt` 中加入了 `redis`。
+  - 注意：需要在运行环境启动 Redis 服务以启用跨进程缓存；否则代码会自动回退到内存缓存。
+
+- T2: 异步后台抓取（已实现，状态：完成）
+  - 变更点：`backend/app/core/bg_worker.py` 提供轻量线程队列；`twitter_fetcher` 在缓存未命中时将 Playwright 抓取任务排入后台队列。
+
+后续步骤会在本文件中按顺序记录实现状态与操作命令。
