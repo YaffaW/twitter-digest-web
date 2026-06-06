@@ -20,14 +20,18 @@
    - 验收标准：API 在缓存未命中时立即返回；后台线程完成后写入缓存并可被后续请求命中。
    - 预估工时：已完成。
 
-3) T3 — 持续采集（scheduled crawlers）与索引（状态：not-started）
+3) T3 — 持续采集（scheduled crawlers）与索引（状态：completed）
    - 目的：建立 near-real-time 数据层，定期抓取关注账号/hashtags 并写入索引，支持快速检索与时间序列分析。
    - 具体改动：
      - 添加 crawler module（`backend/app/core/crawler.py`），维护“关注账号/hashtags”列表（config 文件或 DB），周期性抓取用户时间线与搜索页。使用 `bg_worker` 或后续 worker 框架调度。
      - 将抓取到的推文写入轻量索引（推荐：Meilisearch 或 SQLite+FTS 或 Elastic）。创建 `backend/app/core/indexer.py` 负责写入与查询。
-   - 相关文件：`crawler.py`, `indexer.py`, 配置文件（`config.yaml` 或 env）。
-   - 验收标准：能持续（例如每 1-5 分钟）抓取并将结果写入索引；API 能基于索引返回快速结果。
-   - 预估工时：3-5 天。
+    - 相关文件：`crawler.py`, `indexer.py`, 配置文件（`config.yaml` 或 env）。
+    - 验收标准：能持续（例如每 1-5 分钟）抓取并将结果写入索引；API 能基于索引返回快速结果。
+    - 预估工时：3-5 天。
+    - 已实现要点：
+       - 添加 `backend/app/core/crawler.py` 与 `backend/app/core/indexer.py`，并新增 `backend/scripts/run_crawler.py` 用于一次性或周期运行。
+       - `config.yaml` 用于维护 `accounts` 与 `queries` 列表；抓取结果写入 `backend/data/index.db`，并已导出最近抓取为 `backend/data/recent_tweets.json`。
+       - 在本地环境完成一次完整抓取（示例：31 条结果），并提交代码到仓库。
 
 4) T4 — 规则型 Meme Detector（状态：not-started）
    - 目的：定义并实现“meme 信号”的初级检测器，给每条推文打分（meme_score）。
