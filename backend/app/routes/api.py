@@ -6,6 +6,7 @@ from typing import Optional
 import logging
 
 from ..core import twitter_fetcher, formatter, summarizer
+from ..core import detector
 
 logger = logging.getLogger("api")
 
@@ -81,7 +82,15 @@ async def search_tweets(request: SearchRequest):
             digest = summarizer.summarize_tweets_with_claude(tweets, request.queries)
             if not digest:
                 digest = formatter.format_tweets_markdown(tweets)
-        
+
+        # Ensure meme_score present for each tweet
+        for t in tweets:
+            if t.get('meme_score') is None:
+                try:
+                    t['meme_score'] = detector.score_tweet(t)
+                except Exception:
+                    t['meme_score'] = None
+
         return SearchResponse(
             tweets=tweets,
             count=len(tweets),
