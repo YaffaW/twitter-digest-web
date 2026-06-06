@@ -107,6 +107,23 @@ Search for tweets based on queries.
 }
 ```
 
+Each tweet object in `tweets` includes a `meme_score` field (float 0.0-1.0) indicating a rule-based estimate of how "meme-like" the content is. Example tweet object:
+
+```json
+{
+  "id": "2062990954533937651",
+  "url": "https://x.com/Raion74_/status/2062990954533937651",
+  "author": "Raion74_",
+  "author_name": "Raion",
+  "created_at": "Fri Jun 05 20:12:26 +0000 2026",
+  "likes": 4680,
+  "retweets": 329,
+  "replies": 5,
+  "text": "They did a live version of this meme",
+  "meme_score": 0.78
+}
+```
+
 ### GET `/api/health`
 
 Health check endpoint.
