@@ -1,0 +1,8 @@
+accounts:
+  - abmarkman
+  - mhdksafa
+queries:
+  - "#meme"
+  - "meme"
+max_per: 20
+poll_interval: 60
